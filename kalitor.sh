@@ -36,6 +36,6 @@
 		curdir=$(pwd)
 		sudo -u kalitor -H tar -xvJf tor-browser-linux64-8.0.3_en-US.tar.xz -C /home/kalitor/
 		cd /home/kalitor/tor-browser_en-US/
-		sudo -u kalitor -H ./start-tor-browser.desktop $hostname
+		sudo -u kalitor -H ./start-tor-browser.desktop http://ipinfo.io $hostname
 		cd $curdir
 	fi
