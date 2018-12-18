@@ -6,7 +6,6 @@
 
 trap 'printf "\n"; stop 1; exit 1' 2
 clear
-OSType=""
 
 startmenu() {
 	banner
@@ -14,6 +13,7 @@ startmenu() {
 	printf "  Install Libvirt/KVM                                        =  1\n"
 	printf "  Run Virt-Manager                                           =  2\n"
 	printf "  List Virtual Machines                                      =  3\n"
+	printf "  Start a Virtual Machine                                    =  4\n"
 	printf "  Convert VM file type                                       = 10\n"
 	printf "  Compress VM file                                           = 11\n"
 	printf "  Exit and keep services running                             = 99\n"
@@ -25,6 +25,9 @@ startmenu() {
 			;;
 		2|02) 	virt-manager; startmenu ;;
 		3|03) 	virsh list --all | tee VMs.txt; read -p $'Press enter to continue.' val; startmenu ;;
+		4|04) 	read -p $'Name the VM you want to start' val; virsh start $val && startmenu ;;
+
+
 		10) 	read -p $'  File type to convert to "qcow2, vmdk, vdi, raw":' vmtype; 
 			read -p $'  File to convert from:' vmif;
 			read -p $'  Output file name:' vmof;
@@ -61,4 +64,3 @@ banner() {
 
 banner
 startmenu
-
