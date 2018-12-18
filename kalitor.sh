@@ -7,13 +7,6 @@
 	hostname="cybersecrets.org"
 	# Installing Tor browser
 	printf "   Testing the address through a the Tor Browser Bundle...  \n   Please be patient...\n   This may take a few minutes...\n"
-	apt update
-	apt install tor 
-	apt install apparmor-utils
-	systemctl stop tor
-	aa-complain system_tor
-	systemctl start tor
-	
 	toruser=`cat /etc/passwd | grep -i "kalitor:" | cut -d ":" -f 1`
 	if [[ $toruser == "kalitor" ]]; then
 		printf "   User found\n"
@@ -43,6 +36,6 @@
 		curdir=$(pwd)
 		sudo -u kalitor -H tar -xvJf tor-browser-linux64-8.0.3_en-US.tar.xz -C /home/kalitor/
 		cd /home/kalitor/tor-browser_en-US/
-		sudo -u kalitor -H ./start-tor-browser.desktop http://ipinfo.io $hostname
+		sudo -u kalitor -H ./start-tor-browser.desktop $hostname
 		cd $curdir
 	fi
